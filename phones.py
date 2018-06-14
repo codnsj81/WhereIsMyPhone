@@ -32,7 +32,6 @@ fFont = font.Font(window, size=15, weight='bold', family='Consolas')
 
 RFont = font.Font(window, size=11, family='Consolas')
 
-
 def InitTopText():
     TempFont = font.Font(window, size = 20, weight = 'bold', family = 'Consolas')
     MainText =Label(window, font = TempFont , text = "핸드폰아 어디있니~?")
@@ -46,6 +45,9 @@ def InitSearchAreaBox():
 
     AreaText = Label(window, font = fFont, text=  "지역 : ")
     AreaText.place(x = 350, y = 60)
+
+    AreaText2 =Label(window, font = RFont , text = "(자치시 OR 도 입력)")
+    AreaText2.place(x = 400, y = 33)
 
 def InitSearchBrandBox():
     global SearchBrandBox
@@ -129,6 +131,8 @@ def InitSearchYMD():
 
     BrandText2 =Label(window, font = fFont , text = "~")
     BrandText2.place(x = 168, y = 60)
+    BrandText3 =Label(window, font = RFont , text = "(YMD 8자)")
+    BrandText3.place(x = 141, y = 33)
 
 def InitModelName(): #검색버튼
     global ModelEntry
@@ -150,6 +154,10 @@ def OpenDetailURL(qeueryp):
     root = tree.getroot()
     body = root[1]
     item = body[0]
+    global imageurl
+    imageurl = item.findtext('fdFilePathImg')
+    if imageurl == "https://www.lost112.go.kr/lostnfs/images/sub/img04_no_img.gif" :
+        imageurl = "이미지가 없습니다."
     csteSteNm = "보관상태      :" + item.findtext('csteSteNm') + "\n"
     depPlace = "보관장소      : " +  item.findtext('depPlace') + "\n"
     fdPlace = "습득장소      : " +  item.findtext('fdPlace') + "\n"
@@ -157,8 +165,8 @@ def OpenDetailURL(qeueryp):
     fdYmd = "습득일자      : " +  item.findtext('fdYmd') + "\n"
     tel = "전화번호      : " +  item.findtext('tel') + "\n"
     uniq = item.findtext('uniq')
-
-    totaltext = csteSteNm + depPlace + fdPlace + model + fdYmd + tel + uniq
+    totaltext = imageurl +"\n\n"+ csteSteNm + depPlace + fdPlace + model + fdYmd + tel + \
+                "\n"+uniq
     DetailEntry.insert(END,totaltext)
 
 def OpenURL(queryp):
@@ -219,13 +227,12 @@ def InitResultList():
 def onselect(evt):
     w= evt.widget
     index = int(w.curselection()[0])
-    print(ResultForDetail[index])
     OpenDetailURL( ResultForDetail[index])
 
 def InitDetailWindow():
     global DetailEntry
     DFont = font.Font(window, size=10, family='Consolas')
-    DetailEntry = Text(window, font = DFont, width = 45, height = 9)
+    DetailEntry = Text(window, font = DFont, width = 48, height = 9)
     DetailEntry.place(x= 400 , y= 400)
 
 
@@ -242,16 +249,78 @@ def initPageButton():
     PageText =Label(window, font = RFont , text = "0/0")
     PageText.place(x = 165, y = 560)
 
+def ShowImage():
+
+
+    with urllib.request.urlopen(imageurl) as u:
+        raw_data = u.read()
+    im = Image.open(BytesIO(raw_data))
+    image = ImageTk.PhotoImage(im)
+
+    width = image.width()
+    height = image.height()
+    popimage = Toplevel(window)
+    popimage.geometry(str(width)+"x"+str(height)+"+150+50")
+
+    imagelabel = Label(popimage, image=image, height=height, width=width)
+    imagelabel.pack()
+    imagelabel.place(x=0, y=0)
+    popimage.mainloop()
+
+
 
 def InitOtherButton():
     global EmailButton
     global MapButton
-    EmailButton = Button(window, text = "E-mail", width= 10, height = 1, font = fFont)
+    ShowImageButton = Button (window, text = "이미지 보기", font = fFont,
+                              command = ShowImage)
+    ShowImageButton.place (x = 485, y = 250)
+
+    EmailButton = Button(window, text = "E-mail", width= 10, height = 1, font = fFont, command = EMailButton)
     EmailButton.place(x = 430, y = 550)
 
     MapButton = Button(window, text = "보관장소 지도",font = fFont )
     MapButton.place(x = 580 , y = 550)
 
+def sendEmail():
+
+
+    import mimetypes
+    import smtplib
+    from email.mime.base import MIMEBase
+    from email.mime.text import MIMEText
+
+    smtpHost = "smtp.gmail.com"
+    port = "587"
+    text = DetailEntry.get("1.0",'end-1c')
+    msg = MIMEText(text)
+
+    sender = "codnjs03116@gmail.com"
+    recipient = emailaddress.get()
+
+    msg['Subject'] = "당신의 분실된 핸드폰 정보입니다."
+    msg['From'] = sender
+    msg['To'] = recipient
+    s = smtplib.SMTP(smtpHost, port)
+    s.ehlo()
+    s.starttls()
+    s.ehlo()
+    s.login("codnjs03116@gmail.com", "TTettangLove")
+    s.sendmail(sender, [recipient], msg.as_string())
+    s.close()
+    popip.destroy()
+
+def EMailButton():
+    global emailaddress
+    global popip
+    popip = Toplevel(window)
+    popip.geometry("300x100+460+100")
+    emaillavel = Label(popip, text = "E-mail :", font = RFont)
+    emaillavel.place(x = 10, y = 10)
+    emailaddress= Entry(popip, font = RFont, width = 23)
+    emailaddress.place(x = 100,y = 10)
+    emailsendbutton = Button(popip, text = "Send",font = fFont, command = sendEmail)
+    emailsendbutton.place(x = 125, y = 50)
 
 def SearchButton():
     global pageNum
@@ -271,27 +340,19 @@ def SearchButton():
     paget = str(pageNum) +"/"+ str(totalpage)
     PageText.configure(text = paget)
 
+def main():
 
-with urllib.request.urlopen("https://www.lost112.go.kr/lostnfs/images/sub/img02_no_img.gif") as u:
-    raw_data = u.read()
-im = Image.open(BytesIO(raw_data))
-image = ImageTk.PhotoImage(im)
-
-imagelabel = Label(window, image=image, height=200, width=300)
-imagelabel.pack()
-imagelabel.place(x=410, y=180)
-
-
-InitOtherButton()
-InitSearchAreaBox()
-InitResultList()
-InitTopText()
-InitSearchBrandBox()
-InitSearchYMD()
-InitSearchColorBox()
-InitModelName()
-initPageButton()
-InitDetailWindow()
+    InitOtherButton()
+    InitSearchAreaBox()
+    InitResultList()
+    InitTopText()
+    InitSearchBrandBox()
+    InitSearchYMD()
+    InitSearchColorBox()
+    InitModelName()
+    initPageButton()
+    InitDetailWindow()
+    window.mainloop()
 
 
-window.mainloop()
+main()
